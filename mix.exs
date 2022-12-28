@@ -26,7 +26,8 @@ defmodule PotentialLiterature.MixProject do
       {:plug, "~> 1.13"},
       {:plug_cowboy, "~> 2.0"},
       # https://github.com/Kraigie/nostrum/issues/424
-      {:cowlib, "~> 2.11", hex: :remedy_cowlib, override: true}
+      {:cowlib, "~> 2.11", hex: :remedy_cowlib, override: true},
+      {:tz, "~> 0.24.0"}
     ]
   end
 end

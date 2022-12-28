@@ -42,8 +42,13 @@ defmodule PotentialLiterature.MessageConsumer do
     # ignore messages without a guild_id (i.e. DMs),
     # those not occuring on a tuesday (the 2nd day of the week),
     # and those prefixed with !
+    dow =
+      msg.timestamp
+      |> DateTime.shift_zone!("America/New_York", Tz.TimeZoneDatabase)
+      |> Date.day_of_week()
+
     not is_nil(msg.guild_id) and
-      Date.day_of_week(msg.timestamp) == 2 and
+      dow == 2 and
       not String.starts_with?(msg.content, "!")
   end
 
