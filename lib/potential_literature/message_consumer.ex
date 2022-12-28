@@ -52,11 +52,14 @@ defmodule PotentialLiterature.MessageConsumer do
       not String.starts_with?(msg.content, "!")
   end
 
+  @url_regex ~r/http?s:\/\/[-a-zA-Z0-9\._~:\/\?#\[\]@!\$&\'\(\)\*\+\,;%=]+/
+
   defp is_violation?(msg) do
     c =
       msg.content
       |> String.downcase()
       |> String.normalize(:nfd)
+      |> String.replace(@url_regex, "")
       |> String.codepoints()
 
     "e" in c
