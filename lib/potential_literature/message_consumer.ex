@@ -51,6 +51,7 @@ defmodule PotentialLiterature.MessageConsumer do
     c =
       msg.content
       |> String.downcase()
+      |> String.normalize(:nfd)
       |> String.codepoints()
 
     "e" in c
