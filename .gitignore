@@ -25,3 +25,8 @@ potential_literature-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 /.env
+
+# sqlite
+pl.db
+pl.db-shm
+pl.db-wal

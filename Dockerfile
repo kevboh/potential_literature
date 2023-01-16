@@ -31,6 +31,7 @@ COPY config/config.exs config/
 RUN mix deps.compile
 
 # Compile the release
+COPY priv priv
 COPY lib lib
 
 RUN mix compile
@@ -44,7 +45,7 @@ RUN mix release
 # the compiled release and other runtime necessities
 FROM ${RUNNER_IMAGE}
 
-RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 locales \
+RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 locales sqlite3 \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 # Set the locale
@@ -60,6 +61,10 @@ RUN chown nobody /app
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/prod/rel ./
 
+COPY --chown=root:root entrypoint.sh /entrypoint.sh
+RUN chmod u+x /entrypoint.sh
+RUN chown nobody /entrypoint.sh
+
 USER nobody
 
 # Create a symlink to the command that starts your application. This is required
@@ -68,4 +73,4 @@ USER nobody
 RUN set -eux; \
   ln -nfs /app/$(basename *)/bin/$(basename *) /app/entry
 
-CMD /app/entry start
+CMD /entrypoint.sh
