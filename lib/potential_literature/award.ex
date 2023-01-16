@@ -2,7 +2,7 @@ defmodule PotentialLiterature.Award do
   import Ecto.Query, only: [from: 2]
 
   alias PotentialLiterature.Schema.{Award, Message}
-  alias PotentialLiterature.Repo
+  alias PotentialLiterature.{JulianDay, Repo}
   alias Nostrum.Api
 
   def ceremony do
@@ -17,11 +17,9 @@ defmodule PotentialLiterature.Award do
   def award_guild(date) do
     guild_id = config_snowflake(:summary_guild_id)
     chid = config_snowflake(:summary_channel_id)
-    jday = PotentialLiterature.JulianDay.to_julian_day(date)
+    jday = JulianDay.to_julian_day(date)
 
-    ratios = generate_ratios(guild_id, jday)
-
-    msg = if Enum.empty?(ratios), do: [], else: generate_award_message(guild_id, jday, ratios)
+    msg = make_awards_and_message(guild_id, jday)
 
     Api.create_message(chid, content: msg)
   end
@@ -31,15 +29,21 @@ defmodule PotentialLiterature.Award do
     |> Nostrum.Snowflake.cast!()
   end
 
-  defp generate_award_message(guild_id, jday, ratios) do
-    awards = generate_awards(guild_id, jday)
+  defp make_awards_and_message(guild_id, jday) do
+    ratios = generate_ratios(guild_id, jday)
 
-    """
-    Our Oulipo Day is at its finish. Activity (good/violations/total):
-    #{format_ratios(ratios)}
-    Awards:
-    #{format_awards(awards)}
-    """
+    if Enum.empty?(ratios) do
+      ""
+    else
+      awards = generate_awards(guild_id, jday)
+
+      """
+      Our Oulipo Day is at its finish. Activity (good/violations/total):
+      #{format_ratios(ratios)}
+      Awards:
+      #{format_awards(awards)}
+      """
+    end
   end
 
   defp generate_ratios(guild_id, jday) do
@@ -70,11 +74,11 @@ defmodule PotentialLiterature.Award do
   def generate_awards(guild_id, jday) do
     multi =
       Ecto.Multi.new()
-      |> Ecto.Multi.insert(:most_chatty, most_chatty(guild_id, jday))
-      |> Ecto.Multi.insert(:longest_post, longest_post(guild_id, jday))
-      |> Ecto.Multi.insert(:most_violations, most_violations(guild_id, jday))
-      |> Ecto.Multi.insert(:most_egregious_violation, most_egregious_violation(guild_id, jday))
-      |> Ecto.Multi.insert(:most_bypasses, most_bypasses(guild_id, jday))
+      |> most_chatty(guild_id, jday)
+      |> longest_post(guild_id, jday)
+      |> most_violations(guild_id, jday)
+      |> most_egregious_violation(guild_id, jday)
+      |> most_bypasses(guild_id, jday)
 
     {:ok, _} = Repo.transaction(multi)
 
@@ -103,7 +107,7 @@ defmodule PotentialLiterature.Award do
     )
   end
 
-  defp most_chatty(guild_id, jday) do
+  defp most_chatty(multi, guild_id, jday) do
     res =
       from(m in today_in_guild(guild_id, jday),
         select_merge: %{
@@ -115,15 +119,23 @@ defmodule PotentialLiterature.Award do
       )
       |> Repo.one()
 
-    Award.changeset(%Award{}, %{
-      trophy: "#{mention(res)}: Most posts without fifth glypth (#{res.message_count})",
-      year_julian_day: jday,
-      user_id: res.user_id,
-      guild_id: guild_id
-    })
+    if not is_nil(res) do
+      multi
+      |> Ecto.Multi.insert(
+        :most_chatty,
+        Award.changeset(%Award{}, %{
+          trophy: "#{mention(res)}: Most posts without fifth glypth (#{res.message_count})",
+          year_julian_day: jday,
+          user_id: res.user_id,
+          guild_id: guild_id
+        })
+      )
+    else
+      multi
+    end
   end
 
-  defp longest_post(guild_id, jday) do
+  defp longest_post(multi, guild_id, jday) do
     res =
       from(m in today_in_guild(guild_id, jday),
         select_merge: %{
@@ -135,21 +147,23 @@ defmodule PotentialLiterature.Award do
       )
       |> Repo.one()
 
-    quoted_content =
-      res.content
-      |> String.split("\n")
-      |> Enum.map(fn s -> "> " <> s end)
-      |> Enum.join("\n")
-
-    Award.changeset(%Award{}, %{
-      trophy: "#{mention(res)}: Most-big good post (#{res.length}):\n#{quoted_content}",
-      year_julian_day: jday,
-      user_id: res.user_id,
-      guild_id: guild_id
-    })
+    if not is_nil(res) do
+      multi
+      |> Ecto.Multi.insert(
+        :longest_post,
+        Award.changeset(%Award{}, %{
+          trophy: "#{mention(res)}: Most-big good post (#{res.length}):\n#{quote_content(res)}",
+          year_julian_day: jday,
+          user_id: res.user_id,
+          guild_id: guild_id
+        })
+      )
+    else
+      multi
+    end
   end
 
-  defp most_violations(guild_id, jday) do
+  defp most_violations(multi, guild_id, jday) do
     res =
       from(m in today_in_guild(guild_id, jday),
         select_merge: %{
@@ -161,15 +175,23 @@ defmodule PotentialLiterature.Award do
       )
       |> Repo.one()
 
-    Award.changeset(%Award{}, %{
-      trophy: "#{mention(res)}: Most violations (#{res.violation_count})",
-      year_julian_day: jday,
-      user_id: res.user_id,
-      guild_id: guild_id
-    })
+    if not is_nil(res) do
+      multi
+      |> Ecto.Multi.insert(
+        :most_violations,
+        Award.changeset(%Award{}, %{
+          trophy: "#{mention(res)}: Most violations (#{res.violation_count})",
+          year_julian_day: jday,
+          user_id: res.user_id,
+          guild_id: guild_id
+        })
+      )
+    else
+      multi
+    end
   end
 
-  defp most_egregious_violation(guild_id, jday) do
+  defp most_egregious_violation(multi, guild_id, jday) do
     res =
       from(m in today_in_guild(guild_id, jday),
         select_merge: %{
@@ -182,21 +204,24 @@ defmodule PotentialLiterature.Award do
       )
       |> Repo.one()
 
-    quoted_content =
-      res.content
-      |> String.split("\n")
-      |> Enum.map(fn s -> "> " <> s end)
-      |> Enum.join("\n")
-
-    Award.changeset(%Award{}, %{
-      trophy: "#{mention(res)}: Most-worst violation (#{res.length} glyphs):\n#{quoted_content}",
-      year_julian_day: jday,
-      user_id: res.user_id,
-      guild_id: guild_id
-    })
+    if not is_nil(res) do
+      multi
+      |> Ecto.Multi.insert(
+        :most_egregious_violation,
+        Award.changeset(%Award{}, %{
+          trophy:
+            "#{mention(res)}: Most-worst violation (#{res.length} glyphs):\n#{quote_content(res)}",
+          year_julian_day: jday,
+          user_id: res.user_id,
+          guild_id: guild_id
+        })
+      )
+    else
+      multi
+    end
   end
 
-  defp most_bypasses(guild_id, jday) do
+  defp most_bypasses(multi, guild_id, jday) do
     res =
       from(m in today_in_guild(guild_id, jday),
         select_merge: %{
@@ -208,14 +233,31 @@ defmodule PotentialLiterature.Award do
       )
       |> Repo.one()
 
-    Award.changeset(%Award{}, %{
-      trophy: "#{mention(res)}: Most bypassing via ! (#{res.bypass_count})",
-      year_julian_day: jday,
-      user_id: res.user_id,
-      guild_id: guild_id
-    })
+    if not is_nil(res) do
+      multi
+      |> Ecto.Multi.insert(
+        :most_bypasses,
+        Award.changeset(%Award{}, %{
+          trophy: "#{mention(res)}: Most bypassing via ! (#{res.bypass_count})",
+          year_julian_day: jday,
+          user_id: res.user_id,
+          guild_id: guild_id
+        })
+      )
+    else
+      multi
+    end
   end
 
   defp mention(u) when is_integer(u) or is_binary(u), do: "<@#{u}>"
   defp mention(res), do: mention(res.user_id)
+
+  defp quote_content(content) when is_binary(content) do
+    content
+    |> String.split("\n")
+    |> Enum.map(fn s -> "> " <> s end)
+    |> Enum.join("\n")
+  end
+
+  defp quote_content(res), do: quote_content(res.content)
 end
