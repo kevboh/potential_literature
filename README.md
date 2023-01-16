@@ -17,3 +17,23 @@ mix deps.get
 ```
 
 `iex -S mix` will start your bot locally with a connected REPL.
+
+## Deploying via Fly.io
+
+You'll need a volume named `db` for SQLite. If you’re trying to stick inside the free tier:
+
+```
+fly volumes create db --size 1
+```
+
+Set some secrets to prepare for initial release:
+
+```
+fly secrets set DISCORD_BOT_TOKEN="your-token" SUMMARY_GUILD_ID="your-guild-id" SUMMARY_CHANNEL_ID="your-main-channel-id"
+```
+
+The `DATABASE_URL` should be picked up by the `fly.toml` config. Then:
+
+```
+fly launch
+```
