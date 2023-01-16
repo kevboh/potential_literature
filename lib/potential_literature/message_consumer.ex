@@ -13,21 +13,21 @@ defmodule PotentialLiterature.MessageConsumer do
   end
 
   def handle_event({:MESSAGE_CREATE, msg, _ws_state}) do
-    # IO.inspect(msg)
+    if is_inspectable?(msg) do
+      {:ok, message} = PotentialLiterature.Message.record(msg)
 
-    if is_inspectable?(msg) and is_violation?(msg) do
-      # coward's mode
-      # Api.create_reaction!(msg.channel_id, msg.id, "🔕")
+      if not message.is_bypass and message.is_violation do
+        Api.delete_message!(msg)
+        {:ok, ch} = Api.create_dm(msg.author.id)
 
-      Api.delete_message!(msg)
-      {:ok, ch} = Api.create_dm(msg.author.id)
+        embed =
+          %Embed{}
+          |> Embed.put_title("Fifth Glyph Follows")
+          |> Embed.put_description(msg.content)
 
-      embed =
-        %Embed{}
-        |> Embed.put_title("Fifth Glyph Follows")
-        |> Embed.put_description(msg.content)
+        Api.create_message!(ch.id, content: random_admonition(), embeds: [embed])
+      end
 
-      Api.create_message!(ch.id, content: random_admonition(), embeds: [embed])
       :ok
     else
       :ignore
@@ -48,21 +48,9 @@ defmodule PotentialLiterature.MessageConsumer do
       |> Date.day_of_week()
 
     not is_nil(msg.guild_id) and
-      dow == 2 and
-      not String.starts_with?(msg.content, "!")
-  end
-
-  @url_regex ~r/http?s:\/\/[-a-zA-Z0-9\._~:\/\?#\[\]@!\$&\'\(\)\*\+\,;%=]+/
-
-  defp is_violation?(msg) do
-    c =
-      msg.content
-      |> String.downcase()
-      |> String.normalize(:nfd)
-      |> String.replace(@url_regex, "")
-      |> String.codepoints()
-
-    "e" in c
+      is_nil(msg.author.bot) and
+      String.length(msg.content) > 0 and
+      dow == 2
   end
 
   @admonitions %{

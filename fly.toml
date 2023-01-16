@@ -6,10 +6,15 @@ kill_timeout = 5
 processes = []
 
 [env]
+  DATABASE_URL = "/mnt/db/pl.db"
 
 [experimental]
   allowed_public_ports = []
   auto_rollback = true
+
+[mounts]
+  destination = "/mnt/db"
+  source = "db"
 
 [[services]]
   http_checks = []
