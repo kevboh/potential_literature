@@ -14,6 +14,7 @@ defmodule PotentialLiterature.Schema.Message do
     field(:year_julian_day, :integer)
     field(:is_violation, :boolean)
     field(:is_bypass, :boolean)
+    field(:glyph_count, :integer)
 
     belongs_to(:user, User)
     belongs_to(:guild, Guild)
@@ -30,7 +31,8 @@ defmodule PotentialLiterature.Schema.Message do
       :timestamp,
       :year_julian_day,
       :is_violation,
-      :is_bypass
+      :is_bypass,
+      :glyph_count
     ])
     |> validate_required([
       :id,
@@ -41,7 +43,8 @@ defmodule PotentialLiterature.Schema.Message do
       :timestamp,
       :year_julian_day,
       :is_violation,
-      :is_bypass
+      :is_bypass,
+      :glyph_count
     ])
   end
 end

@@ -10,6 +10,8 @@ defmodule PotentialLiterature.Message do
     guild = get_or_insert_guild(msg.guild_id)
     user = get_or_insert_user(msg.author)
 
+    count = violation_count(msg)
+
     %Message{}
     |> Message.changeset(%{
       id: Nostrum.Snowflake.dump(msg.id),
@@ -19,24 +21,28 @@ defmodule PotentialLiterature.Message do
       content: msg.content,
       timestamp: DateTime.to_naive(datetime),
       year_julian_day: PotentialLiterature.JulianDay.to_julian_day(datetime),
-      is_violation: is_violation?(msg),
-      is_bypass: String.starts_with?(msg.content, "!")
+      is_violation: count > 0,
+      is_bypass: String.starts_with?(msg.content, "!"),
+      glyph_count: count
     })
     |> Repo.insert()
   end
 
   @url_regex ~r/http?s:\/\/[-a-zA-Z0-9\._~:\/\?#\[\]@!\$&\'\(\)\*\+\,;%=]+/
+  @emoji_regex ~r/<a?:\S+:\d+>/
 
-  defp is_violation?(msg) do
-    c =
-      msg.content
-      |> String.downcase()
-      |> String.normalize(:nfd)
-      |> String.replace(@url_regex, "")
-      |> String.codepoints()
-
-    "e" in c
+  defp violation_count(msg) do
+    msg.content
+    |> String.downcase()
+    |> String.normalize(:nfd)
+    |> String.replace(@url_regex, "")
+    |> String.replace(@emoji_regex, "")
+    |> String.codepoints()
+    |> Enum.filter(&is_violating_glyph/1)
+    |> length()
   end
+
+  defp is_violating_glyph(c), do: c in ["e", "℮", "ℯ", "ⅇ"]
 
   defp get_or_insert_user(%Nostrum.Struct.User{
          id: sid,

@@ -124,7 +124,7 @@ defmodule PotentialLiterature.Award do
       |> Ecto.Multi.insert(
         :most_chatty,
         Award.changeset(%Award{}, %{
-          trophy: "#{mention(res)}: Most posts without fifth glypth (#{res.message_count})",
+          trophy: "#{mention(res)}: Most posts without fifth glyph (#{res.message_count})",
           year_julian_day: jday,
           user_id: res.user_id,
           guild_id: guild_id
@@ -195,12 +195,11 @@ defmodule PotentialLiterature.Award do
     res =
       from(m in today_in_guild(guild_id, jday),
         select_merge: %{
-          length:
-            fragment("length(?) - length(replace(?, 'e', '')) as length", m.content, m.content),
+          length: m.glyph_count,
           content: m.content
         },
         where: m.is_violation and not m.is_bypass,
-        order_by: fragment("length desc")
+        order_by: [desc: :glyph_count]
       )
       |> Repo.one()
 
