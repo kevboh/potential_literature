@@ -17,15 +17,20 @@ defmodule PotentialLiterature.MessageConsumer do
       {:ok, message} = PotentialLiterature.Message.record(msg)
 
       if not message.is_bypass and message.is_violation do
-        Api.delete_message!(msg)
-        {:ok, ch} = Api.create_dm(msg.author.id)
+        # deletionist mode
+        # Api.delete_message!(msg)
 
-        embed =
-          %Embed{}
-          |> Embed.put_title("Fifth Glyph Follows")
-          |> Embed.put_description(msg.content)
+        # {:ok, ch} = Api.create_dm(msg.author.id)
 
-        Api.create_message!(ch.id, content: random_admonition(), embeds: [embed])
+        # embed =
+        #   %Embed{}
+        #   |> Embed.put_title("Fifth Glyph Follows")
+        #   |> Embed.put_description(msg.content)
+
+        # Api.create_message!(ch.id, content: random_admonition(), embeds: [embed])
+
+        # coward's mode
+        Api.create_reaction!(msg.channel_id, msg.id, "🔕")
       end
 
       :ok
