@@ -42,6 +42,19 @@ defmodule PotentialLiterature.Message do
     |> length()
   end
 
+  def snowball(words), do: is_snowball(nil, words)
+  defp is_snowball(nil, [word | rest]), do: is_snowball(String.length(word), rest)
+  defp is_snowball(prev_len, [word | rest]) do
+    curr_length = String.length(word)
+    if curr_length - prev_len == 1 do
+      is_snowball(curr_length, rest)
+    else
+      is_snowball(false, [])
+    end
+  end
+  defp is_snowball(false, []), do: false
+  defp is_snowball(prev_len, []), do: true
+
   defp is_violating_glyph(c), do: c in ["e", "℮", "ℯ", "ⅇ"]
 
   defp get_or_insert_user(%Nostrum.Struct.User{
